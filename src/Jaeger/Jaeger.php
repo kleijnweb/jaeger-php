@@ -270,7 +270,7 @@ class Jaeger implements Tracer
     public function flush(): void
     {
         $this->reportSpan();
-        $this->reporter->close();
+        $this->reporter->flush();
     }
 
     private function generateId(): string

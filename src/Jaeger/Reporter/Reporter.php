@@ -21,5 +21,7 @@ interface Reporter
 {
     public function report(Jaeger $jaeger);
 
+    public function flush();
+
     public function close();
 }

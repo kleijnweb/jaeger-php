@@ -24,6 +24,11 @@ class NullReporter implements Reporter
         // no-op
     }
 
+    public function flush()
+    {
+        // no-op
+    }
+
     public function close()
     {
         // no-op

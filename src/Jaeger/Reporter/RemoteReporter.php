@@ -35,6 +35,11 @@ class RemoteReporter implements Reporter
         $this->tran->append($jaeger);
     }
 
+    public function flush()
+    {
+        $this->tran->flush();
+    }
+
     public function close()
     {
         $this->tran->close();

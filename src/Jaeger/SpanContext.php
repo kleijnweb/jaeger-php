@@ -71,6 +71,8 @@ class SpanContext implements \OpenTracing\SpanContext
 
     /**
      * {@inheritdoc}
+     *
+     * @return \Traversable
      */
     public function getIterator()
     {
