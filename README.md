@@ -73,4 +73,4 @@ $config->setSampler($sampler);
 
 ## Special thanks
 
-Thank you @jukylin for creating this library!
+Thank you, @jukylin, for creating this library!
