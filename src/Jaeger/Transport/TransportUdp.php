@@ -20,6 +20,7 @@ use Jaeger\Jaeger;
 use Jaeger\JaegerThrift;
 use Jaeger\Sender\Sender;
 use Jaeger\Sender\UdpSender;
+use Jaeger\Span;
 use Jaeger\Thrift\Agent\AgentClient;
 use Jaeger\Thrift\Batch;
 use Jaeger\Thrift\Process;
@@ -106,12 +107,13 @@ class TransportUdp implements Transport
 
         $thriftSpansBuffer = [];  // Uncommitted span used to temporarily store shards
 
+        /** @var Span $span */
         foreach ($jaeger->spans as $span) {
             $spanThrift = $this->jaegerThrift->buildSpanThrift($span);
             $spanSize = $this->getAndCalcSizeOfSerializedThrift($spanThrift);
             if ($spanSize > self::$maxBatchSpanBytes) {
                 trigger_error(
-                    "Span size of span {$span->getName()} ($spanSize) is too large to fit in UDP packet when considering overhead",
+                    "Span size of span {$span->getOperationName()} ($spanSize) is too large to fit in UDP packet when considering overhead",
                     E_USER_WARNING,
                 );
                 continue;
