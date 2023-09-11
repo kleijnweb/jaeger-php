@@ -56,7 +56,7 @@ class TransportUdp implements Transport
     public $agentHostPort = '';
 
     // sizeof(Span) * numSpans + processByteSize + emitBatchOverhead <= maxPacketSize
-    public static $maxSpanBytes = 0;
+    public static $maxBatchSpanBytes = 0;
 
     /**
      * @var Batch|null
@@ -82,7 +82,7 @@ class TransportUdp implements Transport
             $maxPacketSize = stristr(PHP_OS, 'DAR') ? self::MAC_UDP_MAX_SIZE : Constants\UDP_PACKET_MAX_LENGTH;
         }
 
-        self::$maxSpanBytes = $maxPacketSize - Constants\EMIT_BATCH_OVER_HEAD;
+        self::$maxBatchSpanBytes = $maxPacketSize - Constants\EMIT_BATCH_OVER_HEAD;
 
         $this->tran = new TMemoryBuffer();
 
@@ -109,24 +109,30 @@ class TransportUdp implements Transport
         foreach ($jaeger->spans as $span) {
             $spanThrift = $this->jaegerThrift->buildSpanThrift($span);
             $spanSize = $this->getAndCalcSizeOfSerializedThrift($spanThrift);
-            if ($spanSize > self::$maxSpanBytes) {
-                //throw new \Exception("Span is too large");
+            if ($spanSize > self::$maxBatchSpanBytes) {
+                trigger_error(
+                    "Span size of span {$span->getName()} ($spanSize) is too large to fit in UDP packet when considering overhead",
+                    E_USER_WARNING,
+                );
                 continue;
             }
 
-            $thriftSpansBuffer[] = $spanThrift;
-            $this->bufferSize += $spanSize;
-
-            if ($this->bufferSize >= self::$maxSpanBytes) {
+            // If adding the next span would exceed the max packet size, emit the batch without it
+            if ($this->bufferSize + $spanSize > self::$maxBatchSpanBytes) {
                 self::$batch = new Batch([
                     'process' => $this->process,
                     'spans' => $thriftSpansBuffer,
                 ]);
-                $this->flush();
-                $thriftSpansBuffer = [];  // Empty the temp buffer
+                $this->flush(); // Resets the buffer size
+                $thriftSpansBuffer = []; // Reset the span buffer
             }
+
+            // Add the current span and its size to the work in progress, regardless of whether we just emitted a batch
+            $thriftSpansBuffer[] = $spanThrift;
+            $this->bufferSize += $spanSize;
         }
 
+        // Nothing will be flushed if there were no spans to begin with. TODO: Should we still send the process?
         if (count($thriftSpansBuffer) > 0) {
             self::$batch = new Batch([
                 'process' => $this->process,
